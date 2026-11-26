@@ -3,8 +3,22 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class InitialContext(BaseModel):
-    symptom_regions: list[str] = Field(default_factory=list, max_length=9)
+    symptom_regions: list[str] = Field(default_factory=list, max_length=24)
     initial_symptoms: str = Field(default="", max_length=1000)
+
+
+class StructuredAnswers(BaseModel):
+    body_areas: list[str] = Field(default_factory=list, max_length=24)
+    symptom_regions: list[str] = Field(default_factory=list, max_length=12)
+    answers: dict[str, str | list[str]] = Field(default_factory=dict)
+    notes: dict[str, str] = Field(default_factory=dict)
+    summary: str = Field(default="", max_length=12000)
+
+
+class SessionUpdate(BaseModel):
+    kind: str = Field(min_length=1, max_length=30)
+    symptom: str = Field(min_length=1, max_length=120)
+    notes: str = Field(default="", max_length=2000)
 
 
 class SessionCreate(BaseModel):

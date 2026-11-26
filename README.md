@@ -73,7 +73,7 @@ Depois configure `DATABASE_URL=postgresql+psycopg://lumi:troque-esta-senha@local
 
 ## API principal
 
-`POST /api/sessions`, `GET /api/sessions/{id}`, `POST /api/sessions/{id}/messages`, `POST /api/sessions/{id}/audio`, `POST /api/sessions/{id}/finalize`, `GET /api/reports`, `GET /api/reports/{id}`, `PATCH /api/reports/{id}/review`. A criação retorna um token aleatório da sessão, armazenado apenas como hash e necessário em `X-Session-Token` para recuperar e alterar essa sessão. Endpoints profissionais recebem `X-Clinician-Token`.
+`POST /api/sessions`, `GET /api/sessions/{id}`, `POST /api/sessions/{id}/messages`, `PATCH /api/sessions/{id}/structured-answers`, `POST /api/sessions/{id}/updates`, `POST /api/sessions/{id}/audio`, `POST /api/sessions/{id}/finalize`, `GET /api/reports`, `GET /api/reports/{id}`, `PATCH /api/reports/{id}/review`. A criação retorna um token aleatório da sessão, armazenado apenas como hash e necessário em `X-Session-Token` para recuperar e alterar essa sessão. Endpoints profissionais recebem `X-Clinician-Token`.
 
 As migrations ficam em `migrations/`; crie uma revisão com `alembic revision --autogenerate -m "descricao"`.
 

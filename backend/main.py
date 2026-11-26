@@ -17,14 +17,14 @@ try:
     from .config import settings
     from .database import get_db
     from .models import AnamnesisSession, Message, Patient, ReviewAudit, SoapReport
-    from .schemas import MessageCreate, ReportOut, ReviewIn, SessionCreate, SessionOut
+    from .schemas import MessageCreate, ReportOut, ReviewIn, SessionCreate, SessionOut, SessionUpdate, StructuredAnswers
     from .services import generate_reply
 except ImportError:  # Vercel service root is backend/.
     from clinical import build_soap, detect_red_flags
     from config import settings
     from database import get_db
     from models import AnamnesisSession, Message, Patient, ReviewAudit, SoapReport
-    from schemas import MessageCreate, ReportOut, ReviewIn, SessionCreate, SessionOut
+    from schemas import MessageCreate, ReportOut, ReviewIn, SessionCreate, SessionOut, SessionUpdate, StructuredAnswers
     from services import generate_reply
 
 app = FastAPI(title="Lumi Anamnese API", version="0.1.0")
@@ -161,6 +161,64 @@ def send_message(session_id: str, payload: MessageCreate, x_session_token: str |
         session.collected = collected
         session.provider_mode = provider
     db.add(Message(session_id=session.id, role="assistant", content=answer))
+    session.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(session)
+    return session_out(session)
+
+
+@app.patch("/api/sessions/{session_id}/structured-answers", response_model=SessionOut)
+def save_structured_answers(session_id: str, payload: StructuredAnswers, x_session_token: str | None = Header(default=None), db: Session = Depends(get_db)):
+    session = get_session(session_id, db)
+    require_session_access(session, x_session_token)
+    if session.status != "in_progress":
+        raise HTTPException(status_code=409, detail="Esta entrevista já foi finalizada.")
+
+    collected = dict(session.collected or {})
+    answers = payload.answers
+    symptom_answers = [
+        answer
+        for key, value in answers.items()
+        if key.startswith("sym")
+        for answer in (value if isinstance(value, list) else [value])
+        if answer and answer not in {"unknown", "none"}
+    ]
+    complaint_parts = payload.body_areas + symptom_answers
+    collected.update({
+        "body_areas": payload.body_areas,
+        "symptom_regions": payload.symptom_regions,
+        "questionnaire_answers": answers,
+        "questionnaire_notes": payload.notes,
+        "queixa_principal": "; ".join(complaint_parts) or collected.get("initial_symptoms") or "Não informada",
+        "tempo_evolucao": "; ".join(str(v) for k, v in answers.items() if k.startswith("onset") for v in (v if isinstance(v, list) else [v])) or "Não informado",
+        "intensidade": "; ".join(str(v) for k, v in answers.items() if k.startswith("intensity") for v in (v if isinstance(v, list) else [v])) or "Não informada",
+        "evolucao": "; ".join(str(v) for k, v in answers.items() if k.startswith("evolution") for v in (v if isinstance(v, list) else [v])) or "Não informada",
+        "medicamentos_em_uso": payload.notes.get("meds", "; ".join(answers.get("meds", []) if isinstance(answers.get("meds", []), list) else [str(answers.get("meds", "Não informado"))])),
+        "alergias": payload.notes.get("allergies", "; ".join(answers.get("allergies", []) if isinstance(answers.get("allergies", []), list) else [str(answers.get("allergies", "Não informado"))])),
+        "comorbidades": payload.notes.get("conditions", "; ".join(answers.get("conditions", []) if isinstance(answers.get("conditions", []), list) else [str(answers.get("conditions", "Não informado"))])),
+    })
+    session.collected = collected
+    if payload.summary.strip():
+        db.add(Message(session_id=session.id, role="user", content=payload.summary.strip()))
+    session.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(session)
+    return session_out(session)
+
+
+@app.post("/api/sessions/{session_id}/updates", response_model=SessionOut)
+def add_session_update(session_id: str, payload: SessionUpdate, x_session_token: str | None = Header(default=None), db: Session = Depends(get_db)):
+    session = get_session(session_id, db)
+    require_session_access(session, x_session_token)
+    if not session.report:
+        raise HTTPException(status_code=409, detail="Finalize a entrevista antes de registrar uma atualização.")
+    update = {"kind": payload.kind, "symptom": payload.symptom, "notes": payload.notes.strip()}
+    collected = dict(session.collected or {})
+    collected["updates"] = [*collected.get("updates", []), update]
+    session.collected = collected
+    db.add(Message(session_id=session.id, role="user", content=f"Atualização do relato — {payload.kind}: {payload.symptom}. {payload.notes.strip()}".strip()))
+    session.report.status = "pending_review"
+    session.status = "pending_review"
     session.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(session)
