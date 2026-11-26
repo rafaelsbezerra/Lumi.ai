@@ -2,11 +2,17 @@ from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict
 
 
+class InitialContext(BaseModel):
+    symptom_regions: list[str] = Field(default_factory=list, max_length=9)
+    initial_symptoms: str = Field(default="", max_length=1000)
+
+
 class SessionCreate(BaseModel):
     patient_name: str = Field(default="Paciente demonstrativo", min_length=1, max_length=120)
     channel: str = Field(default="web", pattern="^(web|whatsapp|kiosk|qr)$")
     informant_type: str = Field(default="patient", pattern="^(patient|companion|staff)$")
     demo: bool = True
+    initial_context: InitialContext = Field(default_factory=InitialContext)
 
 
 class MessageCreate(BaseModel):

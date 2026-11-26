@@ -114,9 +114,14 @@ def create_session(payload: SessionCreate, db: Session = Depends(get_db)):
     db.add(patient)
     db.flush()
     session_token = secrets.token_urlsafe(32)
-    session = AnamnesisSession(patient_id=patient.id, access_token_hash=hashlib.sha256(session_token.encode()).hexdigest(), informant_type=payload.informant_type, channel=payload.channel, provider_mode="groq" if settings.groq_api_key else "rules_demo", collected={})
+    collected = payload.initial_context.model_dump()
+    session = AnamnesisSession(patient_id=patient.id, access_token_hash=hashlib.sha256(session_token.encode()).hexdigest(), informant_type=payload.informant_type, channel=payload.channel, provider_mode="groq" if settings.groq_api_key else "rules_demo", collected=collected)
     db.add(session)
-    db.add(Message(session=session, role="assistant", content="Olá! Sou a Lumi. Vou organizar o que você contar para a equipe de saúde. O que está incomodando você hoje?"))
+    selected_regions = collected.get("symptom_regions", [])
+    region_context = f" Você indicou estas regiões: {', '.join(selected_regions)}." if isinstance(selected_regions, list) and selected_regions else ""
+    initial_symptoms = collected.get("initial_symptoms", "")
+    symptom_context = f" Você descreveu: {initial_symptoms}." if isinstance(initial_symptoms, str) and initial_symptoms else ""
+    db.add(Message(session=session, role="assistant", content=f"Olá! Sou a Lumi. Vou organizar o que você contar para a equipe de saúde.{region_context}{symptom_context} O que está incomodando você hoje?"))
     db.commit()
     db.refresh(session)
     result = session_out(session).model_dump()

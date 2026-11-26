@@ -18,11 +18,13 @@ const patientSchema = z.object({
 type PatientForm = z.infer<typeof patientSchema>;
 type InformantType = PatientForm["informant_type"];
 type ChatMessage = { id: string; role: string; content: string };
-type Session = { id: string; status: string; messages: ChatMessage[]; provider_mode: string; informant_type: InformantType; collected: Record<string, string>; session_token?: string };
+type Session = { id: string; status: string; messages: ChatMessage[]; provider_mode: string; informant_type: InformantType; collected: Record<string, string | string[]>; session_token?: string };
 type SoapContent = { queixa_principal: string; tempo_evolucao: string; fonte_relato: string; soap: { subjetivo: string; objetivo: string; avaliacao: string; plano: string }; historico: { medicamentos_em_uso: string[]; alergias: string[]; comorbidades: string[] }; alertas_red_flags: string[]; sugestoes_cid: string[] };
 type Report = { id: string; session_id: string; informant_type: InformantType; status: string; messages: ChatMessage[]; content: SoapContent };
 type ReportRow = { id: string; patient_name: string; is_demo: boolean; status: string; created_at: string };
-type View = "home" | "patient" | "chat" | "confirm" | "report" | "doctor" | "review" | "accessibility";
+type View = "home" | "patient" | "symptoms" | "chat" | "confirm" | "report" | "doctor" | "review" | "accessibility";
+type PendingPatient = { name: string; informant_type: InformantType };
+const symptomRegions = ["Cabeça", "Garganta", "Peito", "Abdômen", "Costas", "Braços", "Pernas", "Pele", "Corpo todo"];
 
 const informantLabel: Record<InformantType, string> = {
   patient: "Paciente",
@@ -64,6 +66,12 @@ export default function Home() {
   const [introVisible, setIntroVisible] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [largeText, setLargeText] = useState(false);
+  const [highContrast, setHighContrast] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [accessSettingsLoaded, setAccessSettingsLoaded] = useState(false);
+  const [pendingPatient, setPendingPatient] = useState<PendingPatient | null>(null);
+  const [selectedSymptomRegions, setSelectedSymptomRegions] = useState<string[]>([]);
+  const [initialSymptoms, setInitialSymptoms] = useState("");
   const [listening, setListening] = useState(false);
   const [cloudTranscription, setCloudTranscription] = useState(true);
   const [transcriptionReady, setTranscriptionReady] = useState(false);
@@ -77,6 +85,14 @@ export default function Home() {
   });
 
   useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("lumiAccessSettings") ?? "{}") as { darkMode?: boolean; largeText?: boolean; highContrast?: boolean; reducedMotion?: boolean };
+      setDarkMode(saved.darkMode ?? false);
+      setLargeText(saved.largeText ?? false);
+      setHighContrast(saved.highContrast ?? false);
+      setReducedMotion(saved.reducedMotion ?? window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    } catch { /* Use the accessible defaults if local storage is unavailable. */ }
+    setAccessSettingsLoaded(true);
     const seenIntro = sessionStorage.getItem("lumiIntroSeen") === "true";
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (seenIntro || reducedMotion) setIntroVisible(false);
@@ -99,12 +115,27 @@ export default function Home() {
     return () => window.clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (accessSettingsLoaded) {
+      localStorage.setItem("lumiAccessSettings", JSON.stringify({ darkMode, largeText, highContrast, reducedMotion }));
+    }
+  }, [accessSettingsLoaded, darkMode, largeText, highContrast, reducedMotion]);
+
   function finishIntro() {
     sessionStorage.setItem("lumiIntroSeen", "true");
     setIntroVisible(false);
   }
 
   async function startInterview(values: PatientForm) {
+    setPendingPatient({ name: values.name, informant_type: values.informant_type });
+    setSelectedSymptomRegions([]);
+    setInitialSymptoms("");
+    setError("");
+    setView("symptoms");
+  }
+
+  async function createInterview() {
+    if (!pendingPatient) return;
     setError("");
     if (databaseStatus === "migration_required") { setError("O banco do Supabase está sem as migrations do Lumi. Aplique os arquivos SQL da pasta supabase/migrations e tente novamente."); return; }
     if (databaseStatus === "unavailable") { setError(databaseError === "database_url_missing" ? "DATABASE_URL não está configurada no ambiente Production da Vercel. Cadastre a conexão do Supabase e faça um novo deploy." : databaseError === "authentication_failed" ? "O Supabase recusou a conexão. Confira usuário do pooler, senha e se caracteres especiais da senha estão codificados na DATABASE_URL." : databaseError === "driver_missing" ? "O driver PostgreSQL não está instalado no serviço da API. Confira o deploy do backend e requirements.txt." : databaseError === "connection_timeout" ? "A conexão com o Supabase expirou. Confira host, porta 6543 e rede do pooler." : `A conexão com o banco falhou (${databaseError || "sem diagnóstico"}). Confira DATABASE_URL no ambiente Production da Vercel.`); return; }
@@ -113,7 +144,15 @@ export default function Home() {
       const created = await request<Session>("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ patient_name: values.name, informant_type: values.informant_type, demo: true }),
+        body: JSON.stringify({
+          patient_name: pendingPatient.name,
+          informant_type: pendingPatient.informant_type,
+          demo: true,
+          initial_context: {
+            symptom_regions: selectedSymptomRegions,
+            initial_symptoms: initialSymptoms.trim(),
+          },
+        }),
       });
       sessionStorage.setItem("anamnesisSession", created.id);
       sessionStorage.setItem("sessionToken", created.session_token ?? "");
@@ -277,7 +316,7 @@ export default function Home() {
     setSession(null); setReport(null); setMessage(""); setError(""); setView("patient");
   }
 
-  const isPatientView = ["home", "patient", "chat", "confirm", "report"].includes(view);
+  const isPatientView = ["home", "patient", "symptoms", "chat", "confirm", "report"].includes(view);
 
   return <>
     {introVisible && <div className="intro-overlay" role="dialog" aria-label="Abertura da Lumi">
@@ -288,7 +327,7 @@ export default function Home() {
       <div className="intro-progress"/>
     </div>}
 
-    <main className="shell" data-theme={darkMode ? "dark" : "light"}>
+    <main className="shell" data-theme={darkMode ? "dark" : "light"} data-large-text={largeText} data-high-contrast={highContrast} data-reduced-motion={reducedMotion}>
       <header className="topbar">
         <button className="brand" onClick={()=>setView("home")} aria-label="Lumi, início">
           <img className="logo-image" src="/lumi-logo.png" alt="Lumi — O cuidado começa antes"/>
@@ -296,7 +335,7 @@ export default function Home() {
         <div className="top-actions">
           <span className="status-pill"><Activity size={15}/>{provider}</span>
           <button className="tool-btn" aria-label={darkMode ? "Ativar tema claro" : "Ativar tema escuro"} onClick={()=>setDarkMode(v=>!v)}>{darkMode?<Sun size={17}/>:<Moon size={17}/>}</button>
-          <button className="tool-btn" aria-label="Aumentar ou restaurar tamanho do texto" onClick={()=>{setLargeText(v=>!v);document.body.classList.toggle("large-type");}}>Aa</button>
+          <button className="tool-btn" aria-label="Aumentar ou restaurar tamanho do texto" aria-pressed={largeText} onClick={()=>setLargeText(v=>!v)}>Aa</button>
           <button className="tool-btn" aria-label="Ouvir apresentação" onClick={()=>speak("Olá. Eu sou a Lumi. O cuidado começa antes. Escolha começar uma pré-anamnese ou acessar a área profissional.")}><Volume2 size={17}/></button>
         </div>
       </header>
@@ -349,9 +388,20 @@ export default function Home() {
               <label className="choice"><input type="radio" value="staff" {...register("informant_type")}/><Stethoscope size={17}/>Equipe auxiliando</label>
             </div>
           </fieldset>
-          <button className="button primary mt-2" disabled={busy}>{busy?<LoaderCircle className="spinner"/>:<HeartPulse size={17}/>}Iniciar conversa</button>
+          <button className="button primary mt-2" disabled={busy}>{busy?<LoaderCircle className="spinner"/>:<HeartPulse size={17}/>}Continuar</button>
         </form>
         {session && <button className="button ghost mt-3" onClick={resumeInterview}>Retomar entrevista em andamento</button>}
+      </section>}
+
+      {view === "symptoms" && pendingPatient && <section className="panel">
+        <button className="tab" onClick={()=>setView("patient")}><ArrowLeft size={16}/>Voltar aos dados iniciais</button>
+        <span className="badge"><Activity size={15}/>ANTES DA CONVERSA</span>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--navy)]">Onde você sente o incômodo?</h1>
+        <p className="muted mt-2">Toque em uma ou mais regiões para ajudar a Lumi a começar. Esta indicação é opcional e não substitui suas respostas.</p>
+        <BodyMap selected={selectedSymptomRegions} onToggle={region=>setSelectedSymptomRegions(current=>current.includes(region)?current.filter(item=>item!==region):[...current,region])}/>
+        <label className="field">Se quiser, descreva o que está sentindo<textarea className="textarea" maxLength={1000} value={initialSymptoms} onChange={e=>setInitialSymptoms(e.target.value)} placeholder="Ex.: dor de cabeça e enjoo desde ontem"/></label>
+        <div className="notice info"><ShieldCheck size={18}/><span>A Lumi vai usar sua seleção como contexto inicial e confirmar as informações durante a conversa.</span></div>
+        <div className="row flex-wrap"><button className="button ghost" onClick={()=>{setSelectedSymptomRegions([]);setInitialSymptoms("");void createInterview();}} disabled={busy}>Pular esta etapa</button><button className="button primary" onClick={()=>void createInterview()} disabled={busy}>{busy?<LoaderCircle className="spinner"/>:<HeartPulse size={17}/>}Iniciar conversa</button></div>
       </section>}
 
       {view === "chat" && session && <section className="panel">
@@ -383,7 +433,7 @@ export default function Home() {
 
       {view === "review" && report && soap && <section className="panel"><button className="tab" onClick={()=>setView("doctor")}><ArrowLeft size={16}/>Voltar aos relatos</button><span className="badge">REVISÃO PROFISSIONAL · {report.status}</span><h1 className="mt-3 text-3xl font-semibold text-[var(--navy)]">Conferir entrevista</h1><div className="notice info mt-3"><UserRound size={18}/><span>Fonte do relato: <strong>{informantLabel[report.informant_type]}</strong>. As falas abaixo são da entrevista; os campos seguintes são o relatório organizado.</span></div><p className="muted mt-4">Conversa original</p><div className="chat max-h-72">{report.messages.map(item=><article key={item.id} className={`message ${item.role === "user" ? "user" : ""}`}><span className="message-name">{item.role === "user"?informantLabel[report.informant_type]:"Lumi"}</span>{item.content}</article>)}</div><p className="muted">Edite ou complemente o relatório. O campo objetivo deixa claro quando não há dados objetivos.</p><div className="review-form"><Field label="Queixa principal" value={soap.queixa_principal} onChange={v=>setSoap({...soap,queixa_principal:v})}/><Field label="Tempo de evolução" value={soap.tempo_evolucao} onChange={v=>setSoap({...soap,tempo_evolucao:v})}/><Field label="Subjetivo" value={soap.soap.subjetivo} onChange={v=>changeSoap("subjetivo",v)}/><Field label="Objetivo" value={soap.soap.objetivo} onChange={v=>changeSoap("objetivo",v)}/><Field label="Síntese preliminar" value={soap.soap.avaliacao} onChange={v=>changeSoap("avaliacao",v)}/><Field label="Encaminhamento para revisão" value={soap.soap.plano} onChange={v=>changeSoap("plano",v)}/></div>{soap.alertas_red_flags.length>0&&<div className="notice warning"><AlertTriangle size={18}/><span>Orientações de segurança: {soap.alertas_red_flags.join("; ")}</span></div>}<label className="field">Notas profissionais<textarea className="textarea" value={reviewNotes} onChange={e=>setReviewNotes(e.target.value)}/></label><button className="button primary" disabled={busy} onClick={approve}>{busy?<LoaderCircle className="spinner"/>:<Check size={17}/>}Salvar revisão e aprovar</button></section>}
 
-      {view === "accessibility" && <section className="panel"><button className="tab" onClick={()=>setView("home")}><ArrowLeft size={16}/>Voltar ao início</button><span className="badge"><Accessibility size={15}/>ACESSIBILIDADE</span><h1 className="mt-3 text-3xl font-semibold text-[var(--navy)]">Ajuste a Lumi ao seu jeito.</h1><p className="muted mt-2">Você pode pedir ajuda de um acompanhante ou da equipe durante a entrevista.</p><div className="path-grid"><article className="path-card"><h2><Eye size={19}/>Leitura</h2><p>Amplie o texto e use leitura em voz alta para escutar as perguntas.</p><button className="button" onClick={()=>{setLargeText(v=>!v);document.body.classList.toggle("large-type");}}>Aa · {largeText?"Restaurar tamanho":"Aumentar texto"}</button></article><article className="path-card"><h2><Volume2 size={19}/>Voz</h2><p>Teste a leitura em português brasileiro e ajuste o volume no dispositivo.</p><button className="button" onClick={()=>speak("Olá! Eu sou a Lumi. Vou fazer uma pergunta por vez para organizar o seu relato de saúde.")}>Ouvir apresentação</button></article><article className="path-card"><h2><Moon size={19}/>Contraste</h2><p>Alterne entre o tema claro da Lumi e uma versão escura.</p><button className="button" onClick={()=>setDarkMode(v=>!v)}>{darkMode?<Sun size={16}/>:<Moon size={16}/>}Alternar tema</button></article><article className="path-card"><h2><UsersRound size={19}/>Atendimento assistido</h2><p>Um acompanhante ou alguém da equipe pode responder junto com a pessoa.</p><button className="button primary" onClick={()=>setView("patient")}>Começar com apoio</button></article></div></section>}
+      {view === "accessibility" && <section className="panel"><button className="tab" onClick={()=>setView("home")}><ArrowLeft size={16}/>Voltar ao início</button><span className="badge"><Accessibility size={15}/>ACESSIBILIDADE</span><h1 className="mt-3 text-3xl font-semibold text-[var(--navy)]">Ajuste a Lumi ao seu jeito.</h1><p className="muted mt-2">As preferências ficam salvas neste dispositivo. Você também pode pedir ajuda de um acompanhante ou da equipe durante a entrevista.</p><div className="path-grid"><article className="path-card"><h2><Eye size={19}/>Leitura</h2><p>Amplie o texto e use leitura em voz alta para escutar as perguntas.</p><button className="button" aria-pressed={largeText} onClick={()=>setLargeText(v=>!v)}>Aa · {largeText?"Restaurar tamanho":"Aumentar texto"}</button></article><article className="path-card"><h2><Volume2 size={19}/>Voz</h2><p>Teste a leitura em português brasileiro e ajuste o volume no dispositivo.</p><button className="button" onClick={()=>speak("Olá! Eu sou a Lumi. Vou fazer uma pergunta por vez para organizar o seu relato de saúde.")}>Ouvir apresentação</button></article><article className="path-card"><h2><Moon size={19}/>Tema</h2><p>Alterne entre o tema claro da Lumi e uma versão escura.</p><button className="button" aria-pressed={darkMode} onClick={()=>setDarkMode(v=>!v)}>{darkMode?<Sun size={16}/>:<Moon size={16}/>}Alternar tema</button></article><article className="path-card"><h2><Eye size={19}/>Contraste</h2><p>Ative bordas e contornos mais marcados para facilitar a leitura e a navegação.</p><button className="button" aria-pressed={highContrast} onClick={()=>setHighContrast(v=>!v)}>{highContrast?"Desativar alto contraste":"Ativar alto contraste"}</button></article><article className="path-card"><h2><Activity size={19}/>Movimento</h2><p>Reduza transições e animações da interface.</p><button className="button" aria-pressed={reducedMotion} onClick={()=>setReducedMotion(v=>!v)}>{reducedMotion?"Permitir animações":"Reduzir movimento"}</button></article><article className="path-card"><h2><UsersRound size={19}/>Atendimento assistido</h2><p>Um acompanhante ou alguém da equipe pode responder junto com a pessoa.</p><button className="button primary" onClick={()=>setView("patient")}>Começar com apoio</button></article></div></section>}
 
       <footer className="footer">Lumi · Relato inicial para revisão de um profissional de saúde.</footer>
     </main>
@@ -392,6 +442,34 @@ export default function Home() {
 
 function Field({label,value,onChange}:{label:string;value:string;onChange:(v:string)=>void}) {
   return <label className="field">{label}<textarea className="textarea" value={value} onChange={e=>onChange(e.target.value)}/></label>;
+}
+
+function BodyMap({selected,onToggle}:{selected:string[];onToggle:(region:string)=>void}) {
+  const [side,setSide] = useState<"front"|"back">("front");
+  const points = side === "front"
+    ? [{region:"Cabeça",left:50,top:7},{region:"Garganta",left:50,top:21},{region:"Peito",left:50,top:34},{region:"Abdômen",left:50,top:48},{region:"Braços",left:16,top:39},{region:"Braços",left:84,top:39},{region:"Pernas",left:40,top:76},{region:"Pernas",left:60,top:76}]
+    : [{region:"Cabeça",left:50,top:7},{region:"Costas",left:50,top:39},{region:"Braços",left:16,top:39},{region:"Braços",left:84,top:39},{region:"Pernas",left:40,top:76},{region:"Pernas",left:60,top:76}];
+  return <div className="body-map-wrap">
+    <div className="body-map-controls" role="group" aria-label="Escolha o lado do corpo">
+      <button type="button" className={`button ${side==="front"?"primary":"ghost"}`} aria-pressed={side==="front"} onClick={()=>setSide("front")}>Frente</button>
+      <button type="button" className={`button ${side==="back"?"primary":"ghost"}`} aria-pressed={side==="back"} onClick={()=>setSide("back")}>Costas</button>
+    </div>
+    <div className="body-map" aria-label={`Mapa do corpo, vista ${side === "front" ? "frontal" : "das costas"}`}>
+      <svg viewBox="0 0 120 260" role="img" aria-label={`Ilustração simples do corpo humano, vista ${side === "front" ? "frontal" : "das costas"}`}>
+        <g fill="var(--body-figure)" stroke="var(--body-outline)" strokeWidth="2" strokeLinejoin="round">
+          <ellipse cx="60" cy="22" rx="14" ry="18"/>
+          <path d="M52 40h16v14H52zM48 53Q35 55 31 66L25 102 18 131Q16 139 22 141Q28 142 31 133L42 107 47 79 45 121 46 153 42 196 39 238Q39 246 48 246Q55 246 56 238L60 186 64 238Q65 246 73 246Q81 246 80 238L76 196 74 153 75 121 78 79 84 107 94 133Q98 142 104 139Q109 137 105 128L96 100 89 66Q85 55 72 53z"/>
+        </g>
+        <g fill="none" stroke="var(--body-detail)" strokeWidth="1.5" strokeLinecap="round">
+          {side === "front" ? <><path d="M45 87q15 6 30 0M47 112q13 4 26 0M51 43h18"/><path d="M54 25h.1m12 0h.1"/></> : <><path d="M60 57v94M44 83q8 17 16 19m16-19q-8 17-16 19M47 145q13 5 26 0"/></>}
+        </g>
+      </svg>
+      {points.map((point,index)=><button type="button" key={`${point.region}-${index}`} className={`body-point ${selected.includes(point.region)?"selected":""}`} style={{left:`${point.left}%`,top:`${point.top}%`}} aria-label={`Selecionar ${point.region}`} aria-pressed={selected.includes(point.region)} onClick={()=>onToggle(point.region)}><span/></button>)}
+    </div>
+    <div className="body-region-options" role="group" aria-label="Regiões do corpo">
+      {symptomRegions.map(region=><button type="button" key={region} className={`body-region ${selected.includes(region)?"selected":""}`} aria-pressed={selected.includes(region)} onClick={()=>onToggle(region)}>{region}</button>)}
+    </div>
+  </div>;
 }
 
 function SoapView({content}:{content:SoapContent}) {
