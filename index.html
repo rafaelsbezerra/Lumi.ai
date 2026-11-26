@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumi — O cuidado começa antes</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --background: #08111e;
+            --surface: #0c1525;
+            --card: #15243a;
+            --primary: #91c5ff;
+            --blue: #3b82d6;
+            --text: #f1f5fa;
+            --muted: #afc1d7;
+            --border: #2b3c52;
+        }
+
+        body.light {
+            --background: #e5eff9;
+            --surface: #f6fafd;
+            --card: #ffffff;
+            --primary: #245fa8;
+            --blue: #245fa8;
+            --text: #142238;
+            --muted: #45566c;
+            --border: #cfdeed;
+        }
+
+        body {
+            background: var(--background);
+            color: var(--text);
+            font-family: Inter, Arial, sans-serif;
+            transition: background .3s, color .3s;
+        }
+
+        button, input, textarea, select {
+            font: inherit;
+        }
+
+        button {
+            cursor: pointer;
+            transition: .2s;
+        }
+
+        button:hover {
+            opacity: .85;
+        }
+
+        button:focus-visible,
+        input:focus-visible,
+        textarea:focus-visible {
+            outline: 3px solid var(--primary);
+        }
+
+        .app {
+            max-width: 500px;
+            min-height: 100dvh;
+            margin: auto;
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            font-size: .75em;
+            color: var(--muted);
+        }
+
+        header {
+            padding: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--primary);
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -2px;
+        }
+
+        .logo {
+            width: 45px;
+            height: 45px;
+        }
+
+        .tools {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-button {
+            color: var(--text);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 42px;
+            height: 42px;
+        }
+
+        main {
+            padding: 20px 22px;
+            flex: 1;
+        }
+
+        h1 {
+            font-size: 29px;
+            line-height: 1.3;
+            margin-bottom: 12px;
+        }
+
+        h2 {
+            font-size: 22px;
+            margin-bottom: 12px;
+        }
+
+        p {
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .tag {
+            color: var(--primary);
+            font-size: .75em;
+            letter-spacing: 2px;
+            font-weight: bold;
+            margin-bottom: 14px;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #0b1f6b, #245fa8);
+            border-radius: 24px;
+            padding: 26px;
+            margin: 20px 0;
+            color: white;
+        }
+
+        .hero p {
+            color: #d9ecff;
+        }
+
+        .hero h2 {
+            font-size: 25px;
+        }
+
+        .primary {
+            width: 100%;
+            background: var(--blue);
+            color: white;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 14px;
+            font-weight: bold;
+            margin-top: 16px;
+        }
+
+        .secondary {
+            width: 100%;
+            color: var(--primary);
+            background: transparent;
+            border: 1px solid var(--border);
+            padding: 14px;
+            border-radius: 14px;
+            margin-top: 10px;
+        }
+
+        .hero .primary {
+            background: #d9ecff;
+            color: #0b1f6b;
+        }
+
+        .card {
+            padding: 18px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            margin-bottom: 12px;
+        }
+
+        .card h3 {
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+
+        .card p {
+            font-size: .85em;
+        }
+
+        .action-card {
+            width: 100%;
+            text-align: left;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .action-icon {
+            background: #245fa833;
+            color: var(--primary);
+            width: 44px;
+            height: 44px;
+            border-radius: 13px;
+            display: grid;
+            place-items: center;
+            font-size: 23px;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-size: 15px;
+            margin: 24px 0 14px;
+        }
+
+        nav {
+            position: sticky;
+            bottom: 0;
+            background: var(--surface);
+            display: flex;
+            justify-content: space-around;
+            border-top: 1px solid var(--border);
+            padding: 14px 5px;
+        }
+
+        nav button {
+            border: none;
+            color: var(--muted);
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            font-size: .72em;
+        }
+
+        nav button span {
+            font-size: 22px;
+        }
+
+        nav button.active {
+            color: var(--primary);
+        }
+
+        .progress {
+            height: 7px;
+            background: var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 15px 0 25px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--blue);
+            transition: width .3s;
+        }
+
+        .option {
+            display: block;
+            width: 100%;
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 16px;
+            text-align: left;
+            margin: 10px 0;
+            border-radius: 13px;
+        }
+
+        .option.selected {
+            border: 2px solid var(--primary);
+            background: #3b82d622;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 14px;
+            color: var(--text);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin: 8px 0;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 110px;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            font-size: .85em;
+            color: var(--muted);
+        }
+
+        .notice {
+            padding: 15px;
+            background: #3b82d616;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: .8em;
+            margin: 16px 0;
+            line-height: 1.6;
+        }
+
+        .emergency {
+            color: #e57373;
+            border-color: #e5737366;
+            background: #e5737311;
+        }
+
+        .body-map {
+            width: 100%;
+            max-height: 330px;
+            margin: 20px auto;
+        }
+
+        .body-part {
+            fill: #b3cfe5;
+            stroke: #4a7fa7;
+            stroke-width: 1.5;
+            cursor: pointer;
+        }
+
+        .body-part:hover,
+        .body-part.selected {
+            fill: #3b82d6;
+        }
+
+        .pain-scale {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 7px;
+            margin-top: 20px;
+        }
+
+        .pain-scale button {
+            color: var(--text);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 5px;
+        }
+
+        .pain-scale button.selected {
+            color: white;
+            background: var(--blue);
+        }
+
+        .report-row {
+            padding: 13px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .report-row strong {
+            color: var(--primary);
+            font-size: .8em;
+        }
+
+        .report-row p {
+            margin-top: 5px;
+            overflow-wrap: anywhere;
+        }
+
+        .success {
+            text-align: center;
+            padding: 35px 0;
+        }
+
+        .success-icon {
+            display: grid;
+            place-items: center;
+            background: #30ad7822;
+            color: #30ad78;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            font-size: 38px;
+        }
+
+        .large-text {
+            font-size: 20px;
+        }
+
+        .footer {
+            font-size: .7em;
+            color: var(--muted);
+            text-align: center;
+            padding: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <div class="topbar">
+        <span>LUMI · PRÉ-ATENDIMENTO</span>
+        <span>Modo demonstração</span>
+    </div>
+
+    <header>
+
+        <div class="brand">
+
+            <svg class="logo" viewBox="0 0 100 100">
+                <defs>
+                    <linearGradient id="gradient" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#3b82d6"/>
+                        <stop offset="100%" stop-color="#0b1f6b"/>
+                    </linearGradient>
+                </defs>
+
+                <path
+                    d="M10 22 A17 17 0 0 1 44 22
+                    L44 61 Q10 40 10 22Z"
+                    fill="#0b1f6b"/>
+
+                <path
+                    d="M64 22 A17 17 0 0 1 98 22
+                    Q98 40 64 55Z"
+                    fill="#91c5ff"/>
+
+                <path
+                    d="M10 38 Q29 49 48 70
+                    Q80 92 98 53
+                    Q96 96 54 96
+                    Q10 95 10 52Z"
+                    fill="url(#gradient)"/>
+            </svg>
+
+            lumi
+
+        </div>
+
+        <div class="tools">
+            <button class="icon-button"
+                aria-label="Alterar tema"
+                onclick="toggleTheme()">◐</button>
+
+            <button class="icon-button"
+                aria-label="Aumentar texto"
+                onclick="toggleFont()">Aa</button>
+
+            <button class="icon-button"
+                aria-label="Acessibilidade"
+                onclick="accessibility()">⚙</button>
+        </div>
+
+    </header>
+
+    <main id="content"></main>
+
+    <div class="footer">
+        Lumi · O cuidado começa antes.
+    </div>
+
+    <nav>
+        <button onclick="home()">
+            <span>⌂</span>
+            Início
+        </button>
+
+        <button onclick="start()">
+            <span>✚</span>
+            Anamnese
+        </button>
+
+        <button onclick="historyPage()">
+            <span>▤</span>
+            Histórico
+        </button>
+
+        <button onclick="professional()">
+            <span>▣</span>
+            Profissional
+        </button>
+
+        <button onclick="profile()">
+            <span>◎</span>
+            Perfil
+        </button>
+    </nav>
+
+</div>
+
+<script>
+
+    const content = document.getElementById("content");
+
+    let step = 0;
+    let role = "Paciente";
+    let answers = {};
+    let reports = [];
+    let selected = "";
+    let patientName = "Paciente fictício";
+
+    const questions = [
+        {
+            key: "symptom",
+            title: "O que você está sentindo?",
+            description: "Selecione o principal motivo do atendimento.",
+            options: [
+                "Dor",
+                "Febre",
+                "Mal-estar",
+                "Náusea",
+                "Tosse",
+                "Outro sintoma"
+            ]
+        },
+        {
+            key: "location",
+            title: "Onde você sente o desconforto?",
+            description: "Indique a região no mapa corporal.",
+            type: "body"
+        },
+        {
+            key: "duration",
+            title: "Quando começaram os sintomas?",
+            description: "Escolha a opção mais próxima.",
+            options: [
+                "Hoje",
+                "Ontem",
+                "Há alguns dias",
+                "Há mais de uma semana",
+                "Não sei informar"
+            ]
+        },
+        {
+            key: "intensity",
+            title: "Qual a intensidade do desconforto?",
+            description: "0 significa nenhum desconforto e 10, o máximo.",
+            type: "scale"
+        },
+        {
+            key: "evolution",
+            title: "Como os sintomas evoluíram?",
+            options: [
+                "Melhoraram",
+                "Permaneceram iguais",
+                "Pioraram",
+                "Vão e voltam",
+                "Não sei informar"
+            ]
+        },
+        {
+            key: "medications",
+            title: "Utiliza algum medicamento?",
+            description: "Informe os medicamentos, caso saiba.",
+            type: "text"
+        },
+        {
+            key: "allergies",
+            title: "Possui alguma alergia?",
+            description: "Informe alergias conhecidas.",
+            type: "text"
+        },
+        {
+            key: "clinicalHistory",
+            title: "Possui alguma condição de saúde?",
+            description: "Informe doenças ou condições anteriores.",
+            type: "text"
+        },
+        {
+            key: "additional",
+            title: "Deseja acrescentar alguma informação?",
+            description: "Descreva outros sintomas ou observações.",
+            type: "text"
+        }
+    ];
+
+    function escapeHTML(value) {
+        return String(value ?? "").replace(/[&<>"']/g, character => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        })[character]);
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle("light");
+    }
+
+    function toggleFont() {
+        document.body.classList.toggle("large-text");
+    }
+
+    function home() {
+        content.innerHTML = `
+            <div class="tag">CUIDADO INTELIGENTE</div>
+
+            <h1>Como podemos te ajudar hoje?</h1>
+
+            <p>
+                Organize suas informações de saúde
+                antes mesmo da consulta.
+            </p>
+
+            <div class="hero">
+                <h2>Iniciar anamnese</h2>
+
+                <p>
+                    Responda algumas perguntas para preparar
+                    seu relato para o profissional de saúde.
+                </p>
+
+                <button class="primary" onclick="start()">
+                    Começar atendimento →
+                </button>
+            </div>
+
+            <h3 class="section-title">Seus serviços</h3>
+
+            <button class="card action-card" onclick="historyPage()">
+                <div class="action-icon">▤</div>
+                <div>
+                    <h3>Histórico de anamneses</h3>
+                    <p>Consulte seus relatos demonstrativos.</p>
+                </div>
+            </button>
+
+            <button class="card action-card" onclick="profile()">
+                <div class="action-icon">◎</div>
+                <div>
+                    <h3>Meu perfil</h3>
+                    <p>Informações de identificação.</p>
+                </div>
+            </button>
+
+            <button class="card action-card" onclick="accessibility()">
+                <div class="action-icon">⚙</div>
+                <div>
+                    <h3>Acessibilidade</h3>
+                    <p>Personalize sua experiência.</p>
+                </div>
+            </button>
+
+            <div class="notice emergency">
+                Em caso de emergência, procure imediatamente
+                a equipe de saúde. Fora da unidade, ligue 192.
+            </div>
+        `;
+    }
+
+    function start() {
+        content.innerHTML = `
+            <div class="tag">NOVO ATENDIMENTO</div>
+
+            <h1>Para quem é a anamnese?</h1>
+
+            <p>Selecione quem fornecerá as informações.</p>
+
+            <button class="card action-card"
+                onclick="chooseRole('Paciente')">
+
+                <div class="action-icon">◎</div>
+                <div>
+                    <h3>Para mim</h3>
+                    <p>Sou a pessoa que será atendida.</p>
+                </div>
+            </button>
+
+            <button class="card action-card"
+                onclick="chooseRole('Acompanhante')">
+
+                <div class="action-icon">♧</div>
+                <div>
+                    <h3>Para outra pessoa</h3>
+                    <p>Sou acompanhante ou responsável.</p>
+                </div>
+            </button>
+
+            <button class="card action-card"
+                onclick="chooseRole('Funcionário')">
+
+                <div class="action-icon">✚</div>
+                <div>
+                    <h3>Atendimento assistido</h3>
+                    <p>Estou auxiliando o paciente.</p>
+                </div>
+            </button>
+
+            <button class="secondary" onclick="home()">
+                Voltar
+            </button>
+        `;
+    }
+
+    function chooseRole(value) {
+        role = value;
+        step = 0;
+        answers = {};
+
+        content.innerHTML = `
+            <div class="tag">IDENTIFICAÇÃO</div>
+
+            <h1>Vamos começar?</h1>
+
+            <div class="notice">
+                Utilize apenas dados fictícios neste protótipo.
+                As informações não são enviadas a um hospital.
+            </div>
+
+            <label>Nome fictício do paciente</label>
+
+            <input id="patientName"
+                value="Paciente fictício">
+
+            <h3 class="section-title">
+                Como prefere responder?
+            </h3>
+
+            <button class="option" onclick="begin(false)">
+                Responder por escrito
+            </button>
+
+            <button class="option" onclick="begin(true)">
+                Responder utilizando voz
+            </button>
+
+            <button class="secondary" onclick="start()">
+                Voltar
+            </button>
+        `;
+    }
+
+    let voiceMode = false;
+
+    function begin(useVoice) {
+        patientName =
+            document.getElementById("patientName").value.trim()
+            || "Paciente fictício";
+
+        voiceMode = useVoice;
+
+        renderQuestion();
+    }
+
+    function renderQuestion() {
+
+        const question = questions[step];
+
+        selected = answers[question.key] ?? "";
+
+        let title = question.title;
+
+        if (role !== "Paciente") {
+            const alternative = {
+                symptom: "O que o paciente está sentindo?",
+                location: "Onde o paciente sente desconforto?",
+                intensity: "Qual intensidade o paciente informou?",
+                medications: "O paciente utiliza algum medicamento?",
+                allergies: "O paciente possui alguma alergia?",
+                clinicalHistory: "O paciente possui alguma condição de saúde?"
+            };
+
+            title = alternative[question.key] || title;
+        }
+
+        let html = `
+            <div class="tag">
+                ANAMNESE · ${step + 1} DE ${questions.length}
+            </div>
+
+            <div class="progress">
+                <div class="progress-fill"
+                    style="width:${(step + 1) / questions.length * 100}%">
+                </div>
+            </div>
+
+            <h1>${title}</h1>
+
+            <p>${question.description || ""}</p>
+
+            <button class="secondary" onclick="speakCurrent()">
+                🔊 Ouvir pergunta
+            </button>
+        `;
+
+        if (question.type === "body") {
+            html += bodyMap();
+        }
+
+        else if (question.type === "scale") {
+
+            html += `<div class="pain-scale">`;
+
+            for (let i = 0; i <= 10; i++) {
+                html += `
+                    <button
+                        class="${selected === String(i) ? "selected" : ""}"
+                        onclick="selectAnswer('${i}', this)">
+                        ${i}
+                    </button>
+                `;
+            }
+
+            html += `</div>`;
+        }
+
+        else if (question.type === "text") {
+
+            html += `
+                <textarea id="answerInput"
+                    placeholder="Digite sua resposta..."
+                    oninput="selected = this.value"
+                >${escapeHTML(selected)}</textarea>
+
+                <button class="secondary"
+                    onclick="recognizeVoice()">
+                    🎙 Responder por voz
+                </button>
+            `;
+        }
+
+        else {
+
+            question.options.forEach(option => {
+
+                html += `
+                    <button
+                        class="option ${selected === option ? "selected" : ""}"
+                        onclick="selectAnswer('${option}', this)">
+                        ${option}
+                    </button>
+                `;
+            });
+
+            html += `
+                <input id="answerInput"
+                    placeholder="Ou descreva com suas palavras"
+                    oninput="customAnswer(this.value)">
+
+                <button class="secondary"
+                    onclick="recognizeVoice()">
+                    🎙 Responder por voz
+                </button>
+            `;
+        }
+
+        html += `
+            <div class="notice">
+                Caso não saiba a resposta, informe que não sabe.
+                Não é necessário adivinhar informações.
+            </div>
+
+            <button class="primary" onclick="next()">
+                ${step === questions.length - 1
+                    ? "Finalizar anamnese"
+                    : "Continuar →"}
+            </button>
+
+            <button class="secondary" onclick="skipQuestion()">
+                Não sei informar
+            </button>
+
+            <button class="secondary" onclick="previous()">
+                Voltar
+            </button>
+        `;
+
+        content.innerHTML = html;
+
+        if (voiceMode) {
+            speak(title);
+        }
+    }
+
+    function customAnswer(value) {
+        selected = value;
+
+        document.querySelectorAll(".option.selected")
+            .forEach(element => {
+                element.classList.remove("selected");
+            });
+    }
+
+    function selectAnswer(value, element) {
+
+        selected = value;
+
+        document.querySelectorAll(".selected")
+            .forEach(item => {
+                item.classList.remove("selected");
+            });
+
+        element.classList.add("selected");
+
+        const field = document.getElementById("answerInput");
+
+        if (field) {
+            field.value = "";
+        }
+    }
+
+    function bodyMap() {
+
+        return `
+            <svg class="body-map"
+                viewBox="0 0 300 360">
+
+                <circle class="body-part"
+                    cx="150" cy="38" r="27"
+                    onclick="selectBody('Cabeça', this)"/>
+
+                <rect class="body-part"
+                    x="137" y="65" width="26" height="23"
+                    rx="8"
+                    onclick="selectBody('Pescoço', this)"/>
+
+                <path class="body-part"
+                    d="M112 88 Q150 75 188 88
+                    L179 145 L121 145Z"
+                    onclick="selectBody('Peito', this)"/>
+
+                <path class="body-part"
+                    d="M121 145 L179 145
+                    L185 205 Q150 222 115 205Z"
+                    onclick="selectBody('Abdômen', this)"/>
+
+                <rect class="body-part"
+                    x="79" y="88"
+                    width="28" height="123"
+                    rx="14"
+                    transform="rotate(14 93 100)"
+                    onclick="selectBody('Braço direito', this)"/>
+
+                <rect class="body-part"
+                    x="193" y="88"
+                    width="28" height="123"
+                    rx="14"
+                    transform="rotate(-14 207 100)"
+                    onclick="selectBody('Braço esquerdo', this)"/>
+
+                <rect class="body-part"
+                    x="117" y="207"
+                    width="29" height="121"
+                    rx="13"
+                    onclick="selectBody('Perna direita', this)"/>
+
+                <rect class="body-part"
+                    x="154" y="207"
+                    width="29" height="121"
+                    rx="13"
+                    onclick="selectBody('Perna esquerda', this)"/>
+
+                <ellipse class="body-part"
+                    cx="127" cy="337" rx="20" ry="11"
+                    onclick="selectBody('Pé direito', this)"/>
+
+                <ellipse class="body-part"
+                    cx="173" cy="337" rx="20" ry="11"
+                    onclick="selectBody('Pé esquerdo', this)"/>
+
+            </svg>
+
+            <p id="bodySelection">
+                ${selected
+                    ? escapeHTML(selected)
+                    : "Selecione uma região do corpo."}
+            </p>
+
+            <label for="bodyRegion">Ou escolha uma região:</label>
+
+            <select id="bodyRegion" onchange="selectBodyText(this.value)">
+                <option value="">Selecionar</option>
+                ${[
+                    "Cabeça",
+                    "Pescoço",
+                    "Peito",
+                    "Abdômen",
+                    "Costas",
+                    "Braço direito",
+                    "Braço esquerdo",
+                    "Perna direita",
+                    "Perna esquerda",
+                    "Pé direito",
+                    "Pé esquerdo",
+                    "Corpo inteiro",
+                    "Não se aplica"
+                ].map(part => `
+                    <option value="${part}"
+                        ${selected === part ? "selected" : ""}>
+                        ${part}
+                    </option>
+                `).join("")}
+            </select>
+        `;
+    }
+
+    function selectBody(value, element) {
+
+        selected = value;
+
+        document.querySelectorAll(".body-part")
+            .forEach(part => {
+                part.classList.remove("selected");
+            });
+
+        element.classList.add("selected");
+
+        document.getElementById("bodySelection")
+            .textContent = "Região: " + value;
+
+        document.getElementById("bodyRegion").value = value;
+    }
+
+    function selectBodyText(value) {
+        selected = value;
+
+        document.getElementById("bodySelection")
+            .textContent = "Região: " + value;
+
+        document.querySelectorAll(".body-part")
+            .forEach(part => {
+                part.classList.remove("selected");
+            });
+    }
+
+    function next() {
+
+        if (!String(selected).trim()) {
+            alert("Selecione ou informe uma resposta.");
+            return;
+        }
+
+        answers[questions[step].key] = selected;
+
+        if (step < questions.length - 1) {
+            step++;
+            renderQuestion();
+        } else {
+            finish();
+        }
+    }
+
+    function skipQuestion() {
+        selected = "Não informado";
+        next();
+    }
+
+    function previous() {
+
+        if (step > 0) {
+            step--;
+            renderQuestion();
+        } else {
+            chooseRole(role);
+        }
+    }
+
+    function speak(text) {
+
+        if (!("speechSynthesis" in window)) {
+            return;
+        }
+
+        window.speechSynthesis.cancel();
+
+        const speech = new SpeechSynthesisUtterance(text);
+
+        speech.lang = "pt-BR";
+        speech.rate = 0.9;
+
+        const voices = window.speechSynthesis.getVoices();
+
+        const portugueseVoice = voices.find(voice =>
+            voice.lang === "pt-BR"
+        );
+
+        if (portugueseVoice) {
+            speech.voice = portugueseVoice;
+        }
+
+        window.speechSynthesis.speak(speech);
+    }
+
+    function speakCurrent() {
+        speak(content.querySelector("h1").textContent);
+    }
+
+    function recognizeVoice() {
+
+        const Recognition =
+            window.SpeechRecognition ||
+            window.webkitSpeechRecognition;
+
+        if (!Recognition) {
+            alert("Reconhecimento de voz indisponível neste navegador.");
+            return;
+        }
+
+        const recognition = new Recognition();
+
+        recognition.lang = "pt-BR";
+        recognition.interimResults = false;
+
+        recognition.onresult = event => {
+
+            const text = event.results[0][0].transcript;
+
+            selected = text;
+
+            const field = document.getElementById("answerInput");
+
+            if (field) {
+                field.value = text;
+            }
+        };
+
+        recognition.onerror = () => {
+            alert("Não foi possível reconhecer a voz.");
+        };
+
+        recognition.start();
+    }
+
+    function finish() {
+
+        reports.push({
+            id: Date.now(),
+            patient: patientName,
+            source: role,
+            date: new Date().toLocaleString("pt-BR"),
+            answers: { ...answers },
+            status: "Aguardando revisão",
+            updates: [],
+            notes: ""
+        });
+
+        content.innerHTML = `
+            <div class="success">
+
+                <div class="success-icon">✓</div>
+
+                <h1>Anamnese concluída!</h1>
+
+                <p>
+                    Suas informações foram organizadas
+                    em um relatório demonstrativo.
+                </p>
+
+                <button class="primary"
+                    onclick="showReport(${reports.length - 1})">
+                    Visualizar relatório
+                </button>
+
+                <button class="secondary" onclick="home()">
+                    Voltar ao início
+                </button>
+
+            </div>
+        `;
+    }
+
+    const labels = {
+        symptom: "Queixa principal",
+        location: "Localização",
+        duration: "Início dos sintomas",
+        intensity: "Intensidade",
+        evolution: "Evolução",
+        medications: "Medicamentos",
+        allergies: "Alergias",
+        clinicalHistory: "Histórico clínico",
+        additional: "Informações adicionais"
+    };
+
+    function historyPage() {
+
+        content.innerHTML = `
+            <div class="tag">SEUS REGISTROS</div>
+            <h1>Histórico de anamneses</h1>
+
+            ${reports.length === 0
+                ? `<div class="notice">
+                    Nenhuma anamnese realizada nesta sessão.
+                   </div>`
+                : reports.map((report, index) => `
+                    <div class="card">
+                        <h3>${escapeHTML(report.patient)}</h3>
+                        <p>${report.date}</p>
+                        <p>${report.status}</p>
+
+                        <button class="secondary"
+                            onclick="showReport(${index})">
+                            Visualizar relatório
+                        </button>
+
+                        <button class="secondary"
+                            onclick="updateSymptoms(${index})">
+                            Atualizar sintomas
+                        </button>
+                    </div>
+                `).join("")
+            }
+
+            <button class="primary" onclick="start()">
+                Nova anamnese
+            </button>
+        `;
+    }
+
+    function reportContent(report) {
+
+        return `
+            <div class="card">
+
+                <h3>${escapeHTML(report.patient)}</h3>
+
+                <p>${report.date}</p>
+
+                <p>Fonte do relato: ${escapeHTML(report.source)}</p>
+
+                <p>Status: ${report.status}</p>
+
+                ${Object.entries(report.answers)
+                    .map(([key, value]) => `
+                        <div class="report-row">
+                            <strong>${labels[key]}</strong>
+                            <p>${escapeHTML(value)}</p>
+                        </div>
+                    `).join("")
+                }
+
+                ${report.updates.map(update => `
+                    <div class="report-row">
+                        <strong>Atualização · ${update.date}</strong>
+                        <p>${escapeHTML(update.text)}</p>
+                    </div>
+                `).join("")}
+
+                ${report.notes ? `
+                    <div class="report-row">
+                        <strong>Observações profissionais</strong>
+                        <p>${escapeHTML(report.notes)}</p>
+                    </div>
+                ` : ""}
+
+            </div>
+        `;
+    }
+
+    function showReport(index) {
+
+        const report = reports[index];
+
+        content.innerHTML = `
+            <div class="tag">RELATÓRIO ESTRUTURADO</div>
+
+            <h1>Resumo da anamnese</h1>
+
+            ${reportContent(report)}
+
+            <div class="notice">
+                Relato informado pelo usuário.
+                Não constitui diagnóstico ou avaliação médica.
+            </div>
+
+            <button class="primary"
+                onclick="updateSymptoms(${index})">
+                Atualizar sintomas
+            </button>
+
+            <button class="secondary" onclick="historyPage()">
+                Voltar
+            </button>
+        `;
+    }
+
+    function updateSymptoms(index) {
+
+        content.innerHTML = `
+            <div class="tag">ANAMNESE CONTÍNUA</div>
+
+            <h1>Algo mudou?</h1>
+
+            <p>Informe novos sintomas ou mudanças no relato.</p>
+
+            <textarea id="symptomUpdate"
+                placeholder="Descreva o que mudou..."></textarea>
+
+            <div class="notice">
+                Esta atualização não altera a prioridade
+                do atendimento. Se houver piora importante,
+                procure imediatamente a equipe de saúde.
+            </div>
+
+            <button class="primary" onclick="saveUpdate(${index})">
+                Salvar atualização
+            </button>
+
+            <button class="secondary" onclick="showReport(${index})">
+                Cancelar
+            </button>
+        `;
+    }
+
+    function saveUpdate(index) {
+
+        const value =
+            document.getElementById("symptomUpdate").value.trim();
+
+        if (!value) {
+            alert("Informe uma atualização.");
+            return;
+        }
+
+        reports[index].updates.push({
+            date: new Date().toLocaleString("pt-BR"),
+            text: value
+        });
+
+        reports[index].status = "Aguardando revisão";
+
+        showReport(index);
+    }
+
+    function professional() {
+
+        content.innerHTML = `
+            <div class="tag">ÁREA DEMONSTRATIVA</div>
+
+            <h1>Painel profissional</h1>
+
+            <p>
+                Visualize os relatos estruturados
+                e simule sua revisão.
+            </p>
+
+            <div class="notice">
+                Área de demonstração sem autenticação real.
+            </div>
+
+            ${reports.length === 0
+                ? `<div class="card">
+                    Nenhum relatório disponível.
+                   </div>`
+                : reports.map((report, index) => `
+                    <div class="card">
+
+                        <h3>${escapeHTML(report.patient)}</h3>
+
+                        <p>${report.date}</p>
+                        <p>${report.status}</p>
+
+                        <button class="primary"
+                            onclick="reviewReport(${index})">
+                            Revisar relatório
+                        </button>
+
+                    </div>
+                `).join("")
+            }
+        `;
+    }
+
+    function reviewReport(index) {
+
+        const report = reports[index];
+
+        content.innerHTML = `
+            <div class="tag">REVISÃO PROFISSIONAL</div>
+
+            <h1>Revisar anamnese</h1>
+
+            ${reportContent(report)}
+
+            <label>Observações da revisão</label>
+
+            <textarea id="reviewNotes"
+                placeholder="Adicione observações..."
+            >${escapeHTML(report.notes)}</textarea>
+
+            <button class="primary"
+                onclick="approveReport(${index})">
+                Confirmar revisão demonstrativa
+            </button>
+
+            <button class="secondary" onclick="professional()">
+                Voltar
+            </button>
+        `;
+    }
+
+    function approveReport(index) {
+
+        reports[index].notes =
+            document.getElementById("reviewNotes").value;
+
+        reports[index].status = "Revisado na demonstração";
+
+        professional();
+    }
+
+    function profile() {
+
+        content.innerHTML = `
+            <div class="tag">MINHA CONTA</div>
+
+            <h1>Meu perfil</h1>
+
+            <div class="card">
+                <h3>Paciente demonstrativo</h3>
+                <p>Conta de teste Lumi</p>
+            </div>
+
+            <label>Nome fictício</label>
+            <input id="profileName"
+                value="${escapeHTML(patientName)}">
+
+            <label>Tipo de atendimento</label>
+
+            <select>
+                <option>SUS</option>
+                <option>Convênio</option>
+                <option>Particular</option>
+            </select>
+
+            <button class="primary" onclick="saveProfile()">
+                Salvar informações
+            </button>
+
+            <button class="secondary" onclick="accessibility()">
+                Preferências de acessibilidade
+            </button>
+        `;
+    }
+
+    function saveProfile() {
+
+        patientName =
+            document.getElementById("profileName").value.trim()
+            || "Paciente fictício";
+
+        alert("Nome atualizado nesta demonstração.");
+    }
+
+    function accessibility() {
+
+        content.innerHTML = `
+            <div class="tag">INCLUSÃO DIGITAL</div>
+
+            <h1>Acessibilidade</h1>
+
+            <p>Personalize sua experiência com a Lumi.</p>
+
+            <div class="card">
+                <h3>Tema da interface</h3>
+
+                <button class="secondary" onclick="toggleTheme()">
+                    Alternar modo claro e escuro
+                </button>
+            </div>
+
+            <div class="card">
+                <h3>Tamanho do texto</h3>
+
+                <button class="secondary" onclick="toggleFont()">
+                    Alternar tamanho da fonte
+                </button>
+            </div>
+
+            <div class="card">
+                <h3>Leitura em voz alta</h3>
+
+                <p>Escute as perguntas durante a anamnese.</p>
+
+                <button class="secondary"
+                    onclick="speak('Olá! Eu sou a Lumi. O cuidado começa antes.')">
+                    Testar voz
+                </button>
+            </div>
+
+            <div class="card">
+                <h3>Idiomas e Libras</h3>
+
+                <p>
+                    Português disponível.
+                    Outros idiomas e integração com Libras
+                    são recursos planejados.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>Atendimento assistido</h3>
+
+                <p>
+                    Um acompanhante ou funcionário pode
+                    auxiliar no preenchimento.
+                </p>
+
+                <button class="secondary"
+                    onclick="chooseRole('Acompanhante')">
+                    Iniciar atendimento assistido
+                </button>
+            </div>
+
+            <button class="secondary" onclick="home()">
+                Voltar
+            </button>
+        `;
+    }
+
+    home();
+
+</script>
+
+</body>
+</html>
