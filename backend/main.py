@@ -78,6 +78,7 @@ def require_session_access(session: AnamnesisSession, token: str | None):
 
 @app.get("/api/health")
 def health(db: Session = Depends(get_db)):
+    database_error = None
     try:
         inspector = inspect(db.get_bind())
         required_tables = {"patients", "anamnesis_sessions", "messages", "soap_reports", "review_audits"}
@@ -88,10 +89,21 @@ def health(db: Session = Depends(get_db)):
             database = "migration_required"
         else:
             database = "ready"
-    except Exception:
+    except Exception as exc:
         database = "unavailable"
-    return {"status": "ok" if database == "ready" else "degraded", "provider": "groq" if settings.groq_api_key else "rules_demo", "transcription": bool(settings.groq_api_key), "database": database}
-
+        original = getattr(exc, "orig", exc)
+        sqlstate = getattr(original, "sqlstate", None) or getattr(original, "pgcode", None)
+        if isinstance(original, ModuleNotFoundError) or type(original).__name__ == "NoSuchModuleError":
+            database_error = "driver_missing"
+        elif sqlstate in {"28P01", "28000"}:
+            database_error = "authentication_failed"
+        elif sqlstate and str(sqlstate).startswith("08"):
+            database_error = "connection_failed"
+        elif "timeout" in type(original).__name__.casefold():
+            database_error = "connection_timeout"
+        else:
+            database_error = type(original).__name__
+    return {"status": "ok" if database == "ready" else "degraded", "provider": "groq" if settings.groq_api_key else "rules_demo", "transcription": bool(settings.groq_api_key), "database": database, "database_error": database_error}
 
 @app.post("/api/sessions", response_model=SessionOut, status_code=201)
 def create_session(payload: SessionCreate, db: Session = Depends(get_db)):

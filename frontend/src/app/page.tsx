@@ -54,6 +54,7 @@ export default function Home() {
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [provider, setProvider] = useState("Conectando à Lumi…");
   const [databaseStatus, setDatabaseStatus] = useState("checking");
+  const [databaseError, setDatabaseError] = useState("");
   const [message, setMessage] = useState("");
   const [clinicianToken, setClinicianToken] = useState("");
   const [reviewNotes, setReviewNotes] = useState("");
@@ -80,10 +81,11 @@ export default function Home() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (seenIntro || reducedMotion) setIntroVisible(false);
     const timer = window.setTimeout(() => setIntroVisible(false), 5200);
-    request<{ provider: string; transcription: boolean; database: string }>("/api/health")
+    request<{ provider: string; transcription: boolean; database: string; database_error?: string | null }>("/api/health")
       .then(data => {
         setCloudTranscription(data.transcription);
         setDatabaseStatus(data.database);
+        setDatabaseError(data.database_error ?? "");
         setProvider(data.database === "migration_required" ? "Migration do banco pendente" : data.database !== "ready" ? "Banco indisponível" : data.provider === "groq" ? "IA configurada" : "Modo demonstrativo");
       })
       .catch(() => { setDatabaseStatus("unavailable"); setProvider("API indisponível"); });
@@ -105,7 +107,7 @@ export default function Home() {
   async function startInterview(values: PatientForm) {
     setError("");
     if (databaseStatus === "migration_required") { setError("O banco do Supabase está sem as migrations do Lumi. Aplique os arquivos SQL da pasta supabase/migrations e tente novamente."); return; }
-    if (databaseStatus === "unavailable") { setError("A API não conseguiu acessar o banco. Confira DATABASE_URL nas variáveis de produção da Vercel."); return; }
+    if (databaseStatus === "unavailable") { setError(databaseError === "authentication_failed" ? "O Supabase recusou a conexão. Confira usuário do pooler, senha e se caracteres especiais da senha estão codificados na DATABASE_URL." : databaseError === "driver_missing" ? "O driver PostgreSQL não está instalado no serviço da API. Confira o deploy do backend e requirements.txt." : databaseError === "connection_timeout" ? "A conexão com o Supabase expirou. Confira host, porta 6543 e rede do pooler." : `A conexão com o banco falhou (${databaseError || "sem diagnóstico"}). Confira DATABASE_URL no ambiente Production da Vercel.`); return; }
     setBusy(true);
     try {
       const created = await request<Session>("/api/sessions", {
