@@ -2,6 +2,7 @@ import uuid
 import hashlib
 import secrets
 import hmac
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -78,6 +79,8 @@ def require_session_access(session: AnamnesisSession, token: str | None):
 
 @app.get("/api/health")
 def health(db: Session = Depends(get_db)):
+    if os.getenv("VERCEL") and not os.getenv("DATABASE_URL"):
+        return {"status": "degraded", "provider": "groq" if settings.groq_api_key else "rules_demo", "transcription": bool(settings.groq_api_key), "database": "unavailable", "database_error": "database_url_missing"}
     database_error = None
     try:
         inspector = inspect(db.get_bind())
