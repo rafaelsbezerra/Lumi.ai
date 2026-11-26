@@ -32,11 +32,15 @@ const informantLabel: Record<InformantType, string> = {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${api}${path}`, init);
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.detail ?? "Não foi possível concluir a solicitação.");
+  const body = await response.text();
+  let data: { detail?: string } = {};
+  try { data = body ? JSON.parse(body) as { detail?: string } : {}; } catch { /* proxy errors may not be JSON */ }
+  if (!response.ok) {
+    const detail = data.detail || `Erro HTTP ${response.status}${response.statusText ? ` · ${response.statusText}` : ""}`;
+    throw new Error(detail);
+  }
   return data as T;
 }
-
 const patientHeaders = () => ({ "X-Session-Token": sessionStorage.getItem("sessionToken") ?? "" });
 const doctorHeaders = () => ({ "X-Clinician-Token": sessionStorage.getItem("clinicianToken") ?? "" });
 
@@ -49,6 +53,7 @@ export default function Home() {
   const [report, setReport] = useState<Report | null>(null);
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [provider, setProvider] = useState("Conectando à Lumi…");
+  const [databaseStatus, setDatabaseStatus] = useState("checking");
   const [message, setMessage] = useState("");
   const [clinicianToken, setClinicianToken] = useState("");
   const [reviewNotes, setReviewNotes] = useState("");
@@ -75,12 +80,13 @@ export default function Home() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (seenIntro || reducedMotion) setIntroVisible(false);
     const timer = window.setTimeout(() => setIntroVisible(false), 5200);
-    request<{ provider: string; transcription: boolean }>("/api/health")
+    request<{ provider: string; transcription: boolean; database: string }>("/api/health")
       .then(data => {
         setCloudTranscription(data.transcription);
-        setProvider(data.provider === "groq" ? "IA configurada" : "Modo demonstrativo");
+        setDatabaseStatus(data.database);
+        setProvider(data.database === "migration_required" ? "Migration do banco pendente" : data.database !== "ready" ? "Banco indisponível" : data.provider === "groq" ? "IA configurada" : "Modo demonstrativo");
       })
-      .catch(() => setProvider("API indisponível"));
+      .catch(() => { setDatabaseStatus("unavailable"); setProvider("API indisponível"); });
     const savedId = sessionStorage.getItem("anamnesisSession");
     const token = sessionStorage.getItem("sessionToken");
     if (savedId && token) {
@@ -97,7 +103,10 @@ export default function Home() {
   }
 
   async function startInterview(values: PatientForm) {
-    setError(""); setBusy(true);
+    setError("");
+    if (databaseStatus === "migration_required") { setError("O banco do Supabase está sem as migrations do Lumi. Aplique os arquivos SQL da pasta supabase/migrations e tente novamente."); return; }
+    if (databaseStatus === "unavailable") { setError("A API não conseguiu acessar o banco. Confira DATABASE_URL nas variáveis de produção da Vercel."); return; }
+    setBusy(true);
     try {
       const created = await request<Session>("/api/sessions", {
         method: "POST",

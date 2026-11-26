@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 from sqlalchemy.orm import Session
 
 try:
@@ -77,8 +77,20 @@ def require_session_access(session: AnamnesisSession, token: str | None):
 
 
 @app.get("/api/health")
-def health():
-    return {"status": "ok", "provider": "groq" if settings.groq_api_key else "rules_demo", "transcription": bool(settings.groq_api_key), "database": "configured"}
+def health(db: Session = Depends(get_db)):
+    try:
+        inspector = inspect(db.get_bind())
+        required_tables = {"patients", "anamnesis_sessions", "messages", "soap_reports", "review_audits"}
+        missing_tables = [table for table in required_tables if not inspector.has_table(table)]
+        if missing_tables:
+            database = "migration_required"
+        elif "informant_type" not in {column["name"] for column in inspector.get_columns("anamnesis_sessions")}:
+            database = "migration_required"
+        else:
+            database = "ready"
+    except Exception:
+        database = "unavailable"
+    return {"status": "ok" if database == "ready" else "degraded", "provider": "groq" if settings.groq_api_key else "rules_demo", "transcription": bool(settings.groq_api_key), "database": database}
 
 
 @app.post("/api/sessions", response_model=SessionOut, status_code=201)
