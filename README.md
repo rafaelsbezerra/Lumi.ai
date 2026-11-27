@@ -32,11 +32,14 @@ Para banco SQLite local ou PostgreSQL fora do Supabase, continue usando `alembic
 
 O `vercel.json` configura um único projeto Vercel Services com dois serviços no mesmo domínio: Next.js em `/` e FastAPI em `/api/*`. As chamadas do navegador são same-origin. A Vercel aceita o FastAPI como serviço Python; execute `vercel dev` na raiz do Lumi para validar o mesmo roteamento localmente. A disponibilidade de Vercel Services depende de o recurso estar habilitado para o projeto/conta.
 
-No ambiente da Vercel, cadastre estas variáveis como **secrets/server-only**:
+No ambiente da Vercel, cadastre as variáveis abaixo no serviço correspondente. Mantenha `DATABASE_URL` e `GROQ_API_KEY` como secrets somente do servidor:
 
 - `DATABASE_URL`: URI do Supabase Transaction Pooler na porta 6543, trocando o prefixo para `postgresql+psycopg://` e exigindo SSL (`?sslmode=require`). A senha precisa estar URL-encoded se tiver caracteres especiais.
 - `GROQ_API_KEY`: chave privada do provedor, se quiser ativar a IA/transcrição.
+- `HANDTALK_TOKEN`: token do Hand Talk for Devs para habilitar o avatar 3D e a tradução das respostas em Libras. O token é recebido após contratação com a Hand Talk; configure também o domínio de preview/produção conforme as regras da sua conta. A rota do frontend o entrega ao SDK no navegador, conforme o modelo de integração do fornecedor, portanto use um token limitado ao domínio do projeto.
 - `CLINICIAN_TOKEN`: substitua o token demonstrativo por um valor forte.
+
+O modo Libras pede consentimento antes de enviar respostas da Lumi à Hand Talk. Com a chave configurada, o avatar pode sinalizar automaticamente cada resposta durante a entrevista. A tradução automática pode conter imprecisões e não substitui intérprete humano nem revisão clínica.
 
 O backend desliga prepared statements no Psycopg para o Transaction Pooler e começa com pool local de uma conexão por instância. A migration SQL do Supabase é aplicada uma vez pelo SQL Editor/CLI; a função Vercel não executa migrations ao iniciar. `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` não são necessários para o acesso SQLAlchemy atual; eles serão usados se adicionarmos Supabase Auth/Data API no frontend. A publishable key nunca substitui `DATABASE_URL`.
 
